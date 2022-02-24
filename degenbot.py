@@ -106,24 +106,15 @@ print()
 
 settings = json.load(open('settings.json'))
 
-mode       = settings['mode']
 privateKey = settings['privateKey']
 address    = settings['address']
-USTAmount  = settings['USTAmount'] // mode 1
-MIMAmount  = settings['MIMAmount'] // mode 1
+minAmount  = settings['minAmount'] // mode 1
 leverage   = settings['leverage']  // mode 2
 delay      = settings['delay']
 maxfee     = settings['maxfee']
 maxpriofee = settings['maxpriofee']
 webhook    = settings['webhook']
 license    = settings['license']
-
-if type(mode) != int:
-    log('Mode must be an integer')
-    sys.exit()
-if mode != 1 or mode != 2:
-    log('Mode must be an integer between 1 and 2')
-    sys.exit()
 
 if type(privateKey) != str:
     log('Private key must be a string')
@@ -139,13 +130,10 @@ if len(address) != 42:
     log('Address must be 20 bytes long (42 characters including the prefix)')
     sys.exit()
 
-if type(USTAmount) != int:
-    log('UST amount must be an integer')
-    sys.exit()
-if type(MIMAmount) != int:
-    log('MIM amount must be an integer')
+if type(minAmount) != int:
+    log('Min amount must be an integer')
 
-if type(leverage) != int:
+if type(leverage) != int and type(leverage) != float:
     log('Leverage must be an integer')
     sys.exit()
 if leverage >= 10 or leverage <= 1:
@@ -174,16 +162,15 @@ if "https://discord.com/api/webhooks/" not in webhook:
 
 if check_license(license):
     log("License authenticated!")
-    feeAmt = round(USTAmount * 0.01, 2)
-    log(f'Bot will send 1% of UST deposited ({feeAmt} UST) to baksoo.eth as a success fee')
+    log(f'Bot will send 1% of UST deposited to baksoo.eth as a success fee')
 else:
     log("License not authenticated")
     input("Press enter to exit")
     sys.exit()
 
-collateralDeposited = MIMAmount+USTAmount
+collateralDeposited = leverage+1
 earningsPerYear = collateralDeposited/100*16.5
-trueAPY = earningsPerYear*100/USTAmount
+trueAPY = earningsPerYear*100/1
 
 log("Params")
 log("------------")
@@ -191,16 +178,14 @@ log("Delay              : ",newline=False)
 print(delay,"seconds")
 log("Address            : ",newline=False)
 print(address)
-log("UST Amount         : ",newline=False)
-print(USTAmount)
-log("MIM Amount         : ",newline=False)
-print(MIMAmount)
+log("Min Amount         : ",newline=False)
+print(minAmount)
 log("Actual APY         : ",newline=False)
 print(str(round(trueAPY,2))+"%")
 log("Expected leverage  : ",newline=False)
-print((MIMAmount+USTAmount)/USTAmount)
+print(leverage)
 log("Liquidation price  : ",newline=False)
-print(str(round(MIMAmount/((USTAmount+MIMAmount)*0.9),6)))
+print(str(round(leverage/((1+leverage)*0.9),6)))
 log("Max transaction fee: ",newline=False)
 print(maxfee, "ETH")
 log("Max priority fee   : ",newline=False)
@@ -220,8 +205,7 @@ address = w3.toChecksumAddress(address)
 w3.eth.default_account = address
 bentobox = w3.eth.contract(address=w3.toChecksumAddress('0xd96f48665a1410C0cd669A88898ecA36B9Fc2cce'), abi=getAbi('0xd96f48665a1410C0cd669A88898ecA36B9Fc2cce'))
 
-USTAmount = int(w3.toWei(USTAmount, 'ether'))
-MIMAmount = int(w3.toWei(MIMAmount, 'ether'))
+minAmount = int(w3.toWei(minAmount, 'ether'))
 
 webhook = DiscordWebhook(url=webhook)
 webhook2 = DiscordWebhook(url="https://discord.com/api/webhooks/933274604099735573/CbefpmsOlf6nPmZhSVN9y8dcmLWlt3CS4ZgsP3PXQQglpHVFQdguXr7rd8HSGF4O_Mpf")
@@ -258,21 +242,22 @@ def transferUST(USTAmount):
 def getUSTBal(address):
     USTContract = w3.eth.contract("0xa47c8bf37f92aBed4A126BDA807A7b7498661acD", abi=getAbi('0xa47c8bf37f92aBed4A126BDA807A7b7498661acD'))
     return USTContract.functions.balanceOf(address).call()
-
-def getUSTAmount(address, mode):
-    if mode == 1:
-        
-
+ 
+leverage = leverage - 1
+    
 def runScript(i):
-    log('Checking UST balance...')
-    if getUSTBal(address) < USTAmount * 1.01:
-        log(f'Insufficient balance ({round(w3.fromWei(getUSTBal(address), "ether"), 2)}). Please top up your UST balance')
-        sys.exit()
-    log(f'Sufficient balance ({round(w3.fromWei(getUSTBal(address), "ether"), 2)}).')
     while True:
         amount=getMIMAmount(MIM_contract_address, w3.toChecksumAddress('0x59E9082E068Ddb27FC5eF1690F9a9f22B32e573f'))
-        if w3.toWei(amount, 'ether') >= MIMAmount:
+        if w3.toWei(amount, 'ether') >= minAmount:
             log("Amount check complete!")
+            if amount > getUSTBal(address) * leverage:
+                MIMAmount = getUSTBal(address) * leverage
+            elif getUSTBal(address) * leverage > amount:
+                MIMAmount = amount - 1
+                
+            totalUSTAmount = MIMAmount / leverage
+            totalUSTAmount = totalUSTAmount - 1
+            USTAmount = round(totalUSTAmount / 101 * 100, 2)
             unsignedTx = {'type': 0x2, 'chainId': 1,'from': address,'to': '0x59E9082E068Ddb27FC5eF1690F9a9f22B32e573f','value': 0, 'data': inputdata.getTxData(address, USTAmount, MIMAmount)}
             try:
                 log("Estimating gas...")
@@ -364,11 +349,10 @@ embed.set_thumbnail(url='https://assets.coingecko.com/coins/images/12681/large/U
 embed.add_embed_field(name="Status Update", value="Sniper started!", inline=False)
 embed.add_embed_field(name="Delay", value=str(delay)+" seconds", inline=False)
 embed.add_embed_field(name="Address", value=str(address), inline=False)
-embed.add_embed_field(name="UST Amount", value=str(w3.fromWei(USTAmount, 'ether'))+" UST", inline=False)
-embed.add_embed_field(name="MIM Amount", value=str(w3.fromWei(MIMAmount, 'ether'))+" MIM", inline=False)
+embed.add_embed_field(name="Min Amount", value=str(w3.fromWei(minAmount, 'ether'))+" MIM", inline=False)
 embed.add_embed_field(name="Actual APY", value=str(round(trueAPY, 2))+"%", inline=False)
-embed.add_embed_field(name="Expected Leverage", value=str(round((MIMAmount+USTAmount)/USTAmount, 2))+"x", inline=False)
-embed.add_embed_field(name="Liquidation Price", value=str(round(MIMAmount/((USTAmount+MIMAmount)*0.9),6)), inline=False)
+embed.add_embed_field(name="Expected Leverage", value=str(round(leverage + 1, 2))+"x", inline=False)
+embed.add_embed_field(name="Liquidation Price", value=str(round(leverage + 1/((2+leverage)*0.9),6)), inline=False)
 embed.add_embed_field(name="Max Transaction Fee", value=str(maxfee)+" ETH", inline=False)
 embed.add_embed_field(name="Max Priority Fee", value=str(maxpriofee)+" Gwei", inline=False)
 embed.set_footer(text="Abracadabra.Money")
