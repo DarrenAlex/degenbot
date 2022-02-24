@@ -1,0 +1,15 @@
+{
+    "license":    "DEGEN-XXXX-XXXX-XXXX-XXXX",
+
+    "privateKey": "0xPrivateKey000000000000000000000000000000000000000000000000000000",
+    "address":    "0xAddress000000000000000000000000000000000",
+
+    "USTAmount":  0,
+    "MIMAmount":  0,
+
+    "delay":      10,
+    "maxfee":     0.2,
+    "maxpriofee": 20,
+
+    "webhook":    "https://discord.com/api/webhooks/00000000/xxxxxxx"
+}
