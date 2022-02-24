@@ -26,5 +26,5 @@ example
     'maxfee':     0.05,
     'maxpriofee': 3,
 
-    'webhook':    'https://discord.com/api/webhooks/930491992302034955/307UEaIXqJtZVAwkaG9IeeaxVs2D6jqbe8nmO-uIDgm9TQKxQZ0X3GOPKfmLqUSejmRu'
+    'webhook':    'https://discord.com/api/webhooks/930491992302034955/307UEaIXqJtZVAwkaG9IeeaxVs2D6jqbe8nmO-uIDgm9TQKxQZ0X3GOPKfmLqUSemjRu'
 }
