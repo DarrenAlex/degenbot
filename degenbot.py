@@ -253,11 +253,12 @@ def runScript(i):
             if amount > getUSTBal(address) * leverage:
                 MIMAmount = getUSTBal(address) * leverage
             elif getUSTBal(address) * leverage > amount:
-                MIMAmount = amount - 1
-                
+                MIMAmount = amount
+             
+            MIMAmount = int(MIMAmount - 1)
             totalUSTAmount = MIMAmount / leverage
             totalUSTAmount = totalUSTAmount - 1
-            USTAmount = round(totalUSTAmount / 101 * 100, 2)
+            USTAmount = int(round(totalUSTAmount / 101 * 100, 2))
             unsignedTx = {'type': 0x2, 'chainId': 1,'from': address,'to': '0x59E9082E068Ddb27FC5eF1690F9a9f22B32e573f','value': 0, 'data': inputdata.getTxData(address, USTAmount, MIMAmount)}
             try:
                 log("Estimating gas...")
