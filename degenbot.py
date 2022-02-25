@@ -136,9 +136,11 @@ if type(minAmount) != int:
 if type(leverage) != int and type(leverage) != float:
     log('Leverage must be an integer')
     sys.exit()
-if leverage >= 10 or leverage <= 1:
+if leverage >= 9 or leverage <= 0:
     log('Leverage must be between 1 and 10')
     sys.exit()
+    
+leverage = leverage - 1
 
 if type(delay) != int:
     log('Delay must be an integer')
@@ -168,7 +170,7 @@ else:
     input("Press enter to exit")
     sys.exit()
 
-collateralDeposited = leverage+1
+collateralDeposited = leverage+2
 earningsPerYear = collateralDeposited/100*16.5
 trueAPY = earningsPerYear*100/1
 
@@ -178,14 +180,14 @@ log("Delay              : ",newline=False)
 print(delay,"seconds")
 log("Address            : ",newline=False)
 print(address)
-log("Min Amount         : ",newline=False)
+log("Min MIM Amount     : ",newline=False)
 print(minAmount)
 log("Actual APY         : ",newline=False)
 print(str(round(trueAPY,2))+"%")
 log("Expected leverage  : ",newline=False)
-print(leverage)
+print(leverage+1)
 log("Liquidation price  : ",newline=False)
-print(str(round(leverage/((1+leverage)*0.9),6)))
+print(str(round(leverage+1/((2+leverage)*0.9),6)))
 log("Max transaction fee: ",newline=False)
 print(maxfee, "ETH")
 log("Max priority fee   : ",newline=False)
@@ -242,8 +244,6 @@ def transferUST(USTAmount):
 def getUSTBal(address):
     USTContract = w3.eth.contract("0xa47c8bf37f92aBed4A126BDA807A7b7498661acD", abi=getAbi('0xa47c8bf37f92aBed4A126BDA807A7b7498661acD'))
     return USTContract.functions.balanceOf(address).call()
- 
-leverage = leverage - 1
     
 def runScript(i):
     while True:
@@ -337,7 +337,7 @@ def runScript(i):
             log("MIMs depleted (",newline=False)
             print(round(amount,2),end="")
             print(" of ",end="")
-            print(w3.fromWei(MIMAmount, 'ether'),end="")
+            print(w3.fromWei(minAmount, 'ether'),end="")
             print(")")
         time.sleep(delay)
         i = delay + i
