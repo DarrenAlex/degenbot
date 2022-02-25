@@ -3,8 +3,8 @@ license    (string) : found in https://degenbot.hyper.co/
 privateKey (string) : use https://iancoleman.io/bip39/ to convert mnemonic into private key
 address    (string) : your public address
 
-USTAmount  (integer): amount of UST in your wallet (or willing to deposit)
-MIMAmount  (integer): MIM amount to borrow (use discord bot or use frontend to get this value)
+minAmount  (integer): Minimum amount of MIM for the bot to trigger
+leverage   (integer): Leverage of your UST amount (leverage on original collateral deposited, see docs)
 
 delay      (integer): delay to fetch available MIMs (recommended: ETH block time)
 maxfee     (integer): max fee paid in ether (NOT GWEI) per txn
@@ -19,8 +19,8 @@ example
     'privateKey': '0x1234567890123456789012345678901234567890123456789012345678901234',
     'address':    '0x1234567890123456789012345678901234567890',
 
-    'USTAmount':  15000,
-    'MIMAmount':  91250,
+    'MIMAmount':  15000,
+    'leverage':   6,
 
     'delay':      13,
     'maxfee':     0.05,
