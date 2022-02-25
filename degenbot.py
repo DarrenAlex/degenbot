@@ -100,7 +100,7 @@ def check_license(license_key):
         log('License not found.')
 
 log("Starting Degenbot...")
-log("v0.9.8 stable")
+log("v0.10.0 stable")
 log("Made by baksoo#3114")
 print()
 
